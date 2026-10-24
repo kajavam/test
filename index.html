@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<title>Steeping Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Layout: one narrow column — a header, a brewing table, and a small timer card */
+  :root {
+    --bg: #f3f6f1;
+    --surface: #ffffff;
+    --fg: #1d2a22;
+    --muted: #5b6b60;
+    --line: #d5ddd4;
+    --accent: #3f7a4f;
+    --accent-ink: #ffffff;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-body: "Work Sans", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141a16; --surface: #1d2520; --fg: #e4ece5; --muted: #9aab9f;
+      --line: #2f3a33; --accent: #7cc08e; --accent-ink: #10180f; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141a16; --surface: #1d2520; --fg: #e4ece5; --muted: #9aab9f;
+    --line: #2f3a33; --accent: #7cc08e; --accent-ink: #10180f; color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 680px; margin: 0 auto; padding-block: 56px 72px; display: grid; gap: 40px; }
+
+  .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin: 0 0 8px; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(2.2rem, 6vw, 3.2rem); line-height: 1.1; margin: 0 0 12px; text-wrap: balance; }
+  h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.5rem; margin: 0 0 12px; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { color: var(--muted); font-size: 1.1rem; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num { font-family: var(--font-mono); white-space: nowrap; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr:focus-visible { background: color-mix(in srgb, var(--accent) 10%, transparent); outline: none; }
+  tbody tr[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+  .timer { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: grid; gap: 16px; }
+  .readout { font-family: var(--font-mono); font-size: clamp(2.6rem, 10vw, 3.6rem); line-height: 1; }
+  .timer-label { color: var(--muted); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; }
+  button {
+    font: 600 15px var(--font-body); padding: 10px 18px; border-radius: 999px;
+    border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
+  button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+  .done { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <p class="eyebrow">Loose-leaf tea</p>
+    <h1>Steeping Guide</h1>
+    <p class="lede">Water temperature and time matter more than the leaf you buy. Pick a tea below to load its time into the timer.</p>
+  </header>
+
+  <section>
+    <h2>Brewing chart</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tea</th><th>Water</th><th>Time</th><th>Leaf / 250 ml</th></tr></thead>
+        <tbody id="teas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="timer" aria-live="polite">
+    <div class="timer-label" id="timer-label">Green tea</div>
+    <div class="readout" id="readout">2:00</div>
+    <div class="controls">
+      <button class="primary" id="start">Start</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div id="status"></div>
+  </section>
+
+  <footer>Times are starting points. Taste, then adjust by 30 seconds next pot.</footer>
+</main>
+
+<script>
+  const teas = [
+    { name: "White tea",  temp: "80 °C / 175 °F", secs: 240, leaf: "2 tsp" },
+    { name: "Green tea",  temp: "75 °C / 167 °F", secs: 120, leaf: "1 tsp" },
+    { name: "Oolong",     temp: "90 °C / 194 °F", secs: 180, leaf: "1½ tsp" },
+    { name: "Black tea",  temp: "95 °C / 203 °F", secs: 240, leaf: "1 tsp" },
+    { name: "Pu-erh",     temp: "100 °C / 212 °F", secs: 300, leaf: "1 tsp" },
+    { name: "Herbal",     temp: "100 °C / 212 °F", secs: 360, leaf: "1½ tsp" },
+  ];
+  const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const tbody = document.getElementById("teas");
+  const readout = document.getElementById("readout");
+  const label = document.getElementById("timer-label");
+  const status = document.getElementById("status");
+  const startBtn = document.getElementById("start");
+  let current = teas[1], left = current.secs, tick = null;
+
+  teas.forEach(t => {
+    const tr = document.createElement("tr");
+    tr.tabIndex = 0;
+    tr.innerHTML = `<td>${t.name}</td><td class="num">${t.temp}</td><td class="num">${fmt(t.secs)}</td><td class="num">${t.leaf}</td>`;
+    const pick = () => select(t, tr);
+    tr.addEventListener("click", pick);
+    tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    tbody.appendChild(tr);
+    if (t === current) tr.setAttribute("aria-selected", "true");
+  });
+
+  function select(t, tr) {
+    tbody.querySelectorAll("tr").forEach(r => r.removeAttribute("aria-selected"));
+    tr.setAttribute("aria-selected", "true");
+    current = t; reset();
+  }
+  function render() { readout.textContent = fmt(left); label.textContent = current.name; }
+  function stop() { clearInterval(tick); tick = null; startBtn.textContent = "Start"; }
+  function reset() { stop(); left = current.secs; status.textContent = ""; status.className = ""; render(); }
+
+  startBtn.addEventListener("click", () => {
+    if (tick) { stop(); startBtn.textContent = "Resume"; return; }
+    if (left === 0) reset();
+    status.textContent = ""; startBtn.textContent = "Pause";
+    tick = setInterval(() => {
+      left--; render();
+      if (left <= 0) { stop(); status.textContent = "Ready. Remove the leaves now."; status.className = "done"; }
+    }, 1000);
+  });
+  document.getElementById("reset").addEventListener("click", reset);
+  render();
+</script>
+</body>
+</html>
